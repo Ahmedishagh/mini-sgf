@@ -47,4 +47,11 @@ typedef struct {
     Bloc blocs[NB_BLOCS];
 } Disque;
 
+typedef struct {
+    char nom[MAX_NOM];
+    int inode;
+} EntreeRep;
+
+#define MAX_ENTREES (TAILLE_BLOC / sizeof(EntreeRep))
+
 #endif
