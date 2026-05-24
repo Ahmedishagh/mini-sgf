@@ -7,6 +7,9 @@ int sauvegarder_disque(void);
 int mycreat(char *nom, int droits);
 int mywrite(int inode_num, char *buffer, int taille);
 int myread(int inode_num, char *buffer, int taille_max);
+int myopen(char *nom, int droits);
+int myclose(int inode_num);
+int chercher_entree(char *nom);
 
 extern Disque disque;
 
@@ -14,20 +17,25 @@ int main(void) {
     printf("=== Test du SGF ===\n");
     charger_disque();
 
-    /* 1. On crée un fichier */
-    int ino = mycreat("hello.txt", 644);
+    int ino = myopen("rapport.txt", 644);
+    printf("Inode obtenu pour rapport.txt : %d\n", ino);
 
-    /* 2. On écrit un texte dedans */
-    char *texte = "Bonjour ! Ceci est mon premier fichier dans le SGF.";
-    int n = mywrite(ino, texte, strlen(texte));
-    printf("Octets ecrits : %d\n", n);
+    char *texte = "Mini systeme de gestion de fichiers - IATIC3.";
+    mywrite(ino, texte, strlen(texte));
 
-    /* 3. On relit le fichier dans un buffer vide */
+    myclose(ino);
+    printf("Fichier ferme.\n");
+
+    int ino2 = myopen("rapport.txt", 644);
+    printf("Inode obtenu en rouvrant       : %d  (doit etre identique)\n", ino2);
+
     char lecture[1024];
-    memset(lecture, 0, sizeof(lecture));     // on vide le buffer d'abord
-    int lus = myread(ino, lecture, 1024);
-    printf("Octets lus    : %d\n", lus);
-    printf("Contenu relu  : %s\n", lecture);
+    memset(lecture, 0, sizeof(lecture));
+    myread(ino2, lecture, 1024);
+    printf("Contenu relu : %s\n", lecture);
+
+    int absent = chercher_entree("inexistant.txt");
+    printf("Recherche d'un fichier absent  : %d  (doit etre -1)\n", absent);
 
     sauvegarder_disque();
     printf("=== Fin du test ===\n");

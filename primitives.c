@@ -156,3 +156,49 @@ int myread(int inode_num, char *buffer, int taille_max) {
 
     return octets_lus;
 }
+
+int chercher_entree(char *nom) {
+    int inode_rep = disque.sb.inode_racine;
+    Inode *rep = &disque.inodes[inode_rep];
+
+    if (rep->blocs[0] == -1) {
+        return -1;
+    }
+
+    int b = rep->blocs[0];
+    EntreeRep *entrees = (EntreeRep *) disque.blocs[b].donnees;
+
+    for (int i = 0; i < (int) MAX_ENTREES; i++) {
+        if (entrees[i].inode != -1) {               
+            if (strcmp(entrees[i].nom, nom) == 0) {
+                return entrees[i].inode;  
+            }
+        }
+    }
+
+    return -1; 
+}
+
+
+int myopen(char *nom, int droits) {
+    int ino = chercher_entree(nom);
+
+    if (ino != -1) {
+        return ino;
+    }
+
+    return mycreat(nom, droits);
+}
+
+
+int myclose(int inode_num) {
+    if (inode_num < 0 || inode_num >= NB_INODES) {
+        printf("Erreur : inode %d invalide.\n", inode_num);
+        return -1;
+    }
+    if (disque.inodes[inode_num].type == TYPE_LIBRE) {
+        printf("Erreur : l'inode %d n'est pas utilise.\n", inode_num);
+        return -1;
+    }
+    return 0;  
+}
