@@ -303,3 +303,26 @@ int myunlink(char *nom) {
 
     return 0;
 }
+
+int mylink(char *nom1, char *nom2) {
+    int ino = chercher_entree(nom1);
+    if (ino == -1) {
+        printf("Erreur : '%s' introuvable.\n", nom1);
+        return -1;
+    }
+
+    if (chercher_entree(nom2) != -1) {
+        printf("Erreur : '%s' existe deja.\n", nom2);
+        return -1;
+    }
+
+    if (ajouter_entree(inode_courant, nom2, ino) == -1) {
+        return -1;
+    }
+
+    disque.inodes[ino].nb_liens++;
+
+    printf("Lien '%s' cree vers '%s' (inode %d, %d liens).\n",
+           nom2, nom1, ino, disque.inodes[ino].nb_liens);
+    return 0;
+}
