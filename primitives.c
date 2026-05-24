@@ -326,3 +326,50 @@ int mylink(char *nom1, char *nom2) {
            nom2, nom1, ino, disque.inodes[ino].nb_liens);
     return 0;
 }
+
+/* ========================================================
+   compter_entrees : compte le nombre d'entrées réelles
+   d'un répertoire (y compris . et ..).
+   ======================================================== */
+int compter_entrees(int inode_rep) {
+    Inode *rep = &disque.inodes[inode_rep];
+    if (rep->blocs[0] == -1) {
+        return 0;
+    }
+
+    int b = rep->blocs[0];
+    EntreeRep *entrees = (EntreeRep *) disque.blocs[b].donnees;
+
+    int compte = 0;
+    for (int i = 0; i < (int) MAX_ENTREES; i++) {
+        if (entrees[i].inode != -1) {
+            compte++;
+        }
+    }
+    return compte;
+}
+
+int myrmdir(char *nom) {
+    int ino = chercher_entree(nom);
+    if (ino == -1) {
+        printf("Erreur : '%s' introuvable.\n", nom);
+        return -1;
+    }
+
+    if (disque.inodes[ino].type != TYPE_REPERTOIRE) {
+        printf("Erreur : '%s' n'est pas un repertoire.\n", nom);
+        return -1;
+    }
+
+    if (compter_entrees(ino) > 2) {
+        printf("Erreur : le repertoire '%s' n'est pas vide.\n", nom);
+        return -1;
+    }
+
+    supprimer_entree(inode_courant, nom);
+
+    liberer_inode(ino);
+
+    printf("Repertoire '%s' supprime (inode %d libere).\n", nom, ino);
+    return 0;
+}
