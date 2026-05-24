@@ -78,3 +78,81 @@ int mycreat(char *nom, int droits) {
     printf("Fichier '%s' cree (inode %d).\n", nom, i);
     return i;
 }
+
+int mywrite(int inode_num, char *buffer, int taille) {
+    Inode *ino = &disque.inodes[inode_num];
+
+    if (ino->type != TYPE_FICHIER) {
+        printf("Erreur : l'inode %d n'est pas un fichier.\n", inode_num);
+        return -1;
+    }
+
+    int octets_ecrits = 0;
+    int reste = taille;
+    int indice_bloc = 0;
+
+    while (reste > 0 && indice_bloc < MAX_BLOCS_FIC) {
+        if (ino->blocs[indice_bloc] == -1) {
+            int b = trouver_bloc_libre();
+            if (b == -1) {
+                printf("Erreur : disque plein.\n");
+                break;
+            }
+            ino->blocs[indice_bloc] = b;
+            disque.sb.bitmap_blocs[b] = 1;
+            disque.sb.nb_blocs_libres--;
+        }
+
+        int a_ecrire = reste;
+        if (a_ecrire > TAILLE_BLOC) {
+            a_ecrire = TAILLE_BLOC;
+        }
+
+        int b = ino->blocs[indice_bloc];
+        memcpy(disque.blocs[b].donnees, buffer + octets_ecrits, a_ecrire);
+
+        octets_ecrits += a_ecrire;
+        reste         -= a_ecrire;
+        indice_bloc++;
+    }
+
+    ino->taille     = octets_ecrits;
+    ino->date_modif = (int) time(NULL);
+
+    return octets_ecrits;
+}
+
+int myread(int inode_num, char *buffer, int taille_max) {
+    Inode *ino = &disque.inodes[inode_num];
+
+    if (ino->type != TYPE_FICHIER) {
+        printf("Erreur : l'inode %d n'est pas un fichier.\n", inode_num);
+        return -1;
+    }
+
+    int octets_lus = 0;
+    int reste = ino->taille;
+    if (reste > taille_max) {
+        reste = taille_max;
+    }
+
+    int indice_bloc = 0;
+    while (reste > 0 && indice_bloc < MAX_BLOCS_FIC) {
+        if (ino->blocs[indice_bloc] == -1) {
+            break;
+            }
+        int a_lire = reste;
+        if (a_lire > TAILLE_BLOC) {
+            a_lire = TAILLE_BLOC;
+        }
+
+        int b = ino->blocs[indice_bloc];
+        memcpy(buffer + octets_lus, disque.blocs[b].donnees, a_lire);
+
+        octets_lus += a_lire;
+        reste      -= a_lire;
+        indice_bloc++;
+    }
+
+    return octets_lus;
+}
