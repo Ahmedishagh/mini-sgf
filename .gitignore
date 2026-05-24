@@ -1,0 +1,11 @@
+# Fichiers compilés
+*.o
+sgf
+mysh
+
+# Image disque générée
+*.img
+
+# Fichiers temporaires de l'éditeur
+*~
+.vscode/
