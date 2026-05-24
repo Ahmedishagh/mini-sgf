@@ -5,37 +5,38 @@
 int charger_disque(void);
 int sauvegarder_disque(void);
 int mycreat(char *nom, int droits);
-int mywrite(int inode_num, char *buffer, int taille);
-int myread(int inode_num, char *buffer, int taille_max);
-int myopen(char *nom, int droits);
-int myclose(int inode_num);
+int mymkdir(char *nom);
 int chercher_entree(char *nom);
 
 extern Disque disque;
+extern int inode_courant;
 
 int main(void) {
     printf("=== Test du SGF ===\n");
     charger_disque();
 
-    int ino = myopen("rapport.txt", 644);
-    printf("Inode obtenu pour rapport.txt : %d\n", ino);
+    int dossier = mymkdir("photos");
 
-    char *texte = "Mini systeme de gestion de fichiers - IATIC3.";
-    mywrite(ino, texte, strlen(texte));
+    mycreat("racine.txt", 644);
 
-    myclose(ino);
-    printf("Fichier ferme.\n");
+    printf("\n--- On entre dans photos ---\n");
+    inode_courant = dossier;
 
-    int ino2 = myopen("rapport.txt", 644);
-    printf("Inode obtenu en rouvrant       : %d  (doit etre identique)\n", ino2);
+    mycreat("vacances.jpg", 644);
 
-    char lecture[1024];
-    memset(lecture, 0, sizeof(lecture));
-    myread(ino2, lecture, 1024);
-    printf("Contenu relu : %s\n", lecture);
+    printf("Recherche 'vacances.jpg' dans photos : inode %d\n",
+           chercher_entree("vacances.jpg"));
 
-    int absent = chercher_entree("inexistant.txt");
-    printf("Recherche d'un fichier absent  : %d  (doit etre -1)\n", absent);
+    printf("Recherche 'racine.txt' dans photos  : %d (doit etre -1)\n",
+           chercher_entree("racine.txt"));
+
+    printf("\n--- On remonte au parent (cd ..) ---\n");
+    inode_courant = chercher_entree("..");
+    printf("Inode courant apres remontee : %d (doit etre 0, la racine)\n",
+           inode_courant);
+
+    printf("Recherche 'racine.txt' dans racine  : inode %d\n",
+           chercher_entree("racine.txt"));
 
     sauvegarder_disque();
     printf("=== Fin du test ===\n");

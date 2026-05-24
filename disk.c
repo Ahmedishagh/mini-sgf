@@ -4,6 +4,7 @@
 #include "sgf.h"
 
 Disque disque;
+int inode_courant;
 
 int trouver_inode_libre(void) {
     for (int i = 0; i < NB_INODES; i++) {
@@ -46,6 +47,8 @@ void formater_disque(void) {
     disque.sb.nb_inodes_libres = disque.sb.nb_inodes_libres - 1;
 
     disque.sb.inode_racine = 0;
+
+    inode_courant = 0;
 
     printf("Disque formate : %d inodes et %d blocs disponibles.\n",
            disque.sb.nb_inodes_libres, disque.sb.nb_blocs_libres);

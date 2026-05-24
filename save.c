@@ -2,6 +2,7 @@
 #include "sgf.h"
 
 extern Disque disque;
+extern int inode_courant;
 
 void formater_disque(void);
 
@@ -29,6 +30,9 @@ int charger_disque(void) {
     fread(&disque, sizeof(Disque), 1, f);
 
     fclose(f);
+
+    inode_courant = disque.sb.inode_racine;
+
     printf("Disque recharge depuis %s.\n", FICHIER_DISQUE);
     return 0;
 }

@@ -4,6 +4,7 @@
 #include "sgf.h"
 
 extern Disque disque;
+extern int inode_courant;
 int trouver_inode_libre(void);
 int trouver_bloc_libre(void);
 
@@ -68,7 +69,7 @@ int mycreat(char *nom, int droits) {
     disque.sb.bitmap_inodes[i] = 1;
     disque.sb.nb_inodes_libres--;
 
-    if (ajouter_entree(disque.sb.inode_racine, nom, i) == -1) {
+    if (ajouter_entree(inode_courant, nom, i) == -1) {
         disque.inodes[i].type = TYPE_LIBRE;
         disque.sb.bitmap_inodes[i] = 0;
         disque.sb.nb_inodes_libres++;
@@ -158,7 +159,7 @@ int myread(int inode_num, char *buffer, int taille_max) {
 }
 
 int chercher_entree(char *nom) {
-    int inode_rep = disque.sb.inode_racine;
+    int inode_rep = inode_courant;
     Inode *rep = &disque.inodes[inode_rep];
 
     if (rep->blocs[0] == -1) {
@@ -201,4 +202,47 @@ int myclose(int inode_num) {
         return -1;
     }
     return 0;  
+}
+
+int mymkdir(char *nom) {
+    if (strlen(nom) >= MAX_NOM) {
+        printf("Erreur : nom trop long.\n");
+        return -1;
+    }
+
+    if (chercher_entree(nom) != -1) {
+        printf("Erreur : '%s' existe deja.\n", nom);
+        return -1;
+    }
+
+    int i = trouver_inode_libre();
+    if (i == -1) {
+        printf("Erreur : plus d'inodes disponibles.\n");
+        return -1;
+    }
+
+    disque.inodes[i].type       = TYPE_REPERTOIRE;
+    disque.inodes[i].taille     = 0;
+    disque.inodes[i].droits     = 755;
+    disque.inodes[i].date_modif = (int) time(NULL);
+    disque.inodes[i].nb_liens   = 1;
+    for (int j = 0; j < MAX_BLOCS_FIC; j++) {
+        disque.inodes[i].blocs[j] = -1;
+    }
+
+    disque.sb.bitmap_inodes[i] = 1;
+    disque.sb.nb_inodes_libres--;
+
+    if (ajouter_entree(inode_courant, nom, i) == -1) {
+        disque.inodes[i].type = TYPE_LIBRE;
+        disque.sb.bitmap_inodes[i] = 0;
+        disque.sb.nb_inodes_libres++;
+        return -1;
+    }
+
+    ajouter_entree(i, ".", i);
+    ajouter_entree(i, "..", inode_courant);
+
+    printf("Repertoire '%s' cree (inode %d).\n", nom, i);
+    return i;
 }
