@@ -5,38 +5,41 @@
 int charger_disque(void);
 int sauvegarder_disque(void);
 int mycreat(char *nom, int droits);
-int mymkdir(char *nom);
-int chercher_entree(char *nom);
+int mywrite(int inode_num, char *buffer, int taille);
+int myunlink(char *nom);
 
 extern Disque disque;
 extern int inode_courant;
 
 int main(void) {
-    printf("=== Test du SGF ===\n");
+    printf("=== Test suppression (non-fuite) ===\n");
     charger_disque();
 
-    int dossier = mymkdir("photos");
+    mycreat("permanent.txt", 644);
 
-    mycreat("racine.txt", 644);
+    int inodes_avant = disque.sb.nb_inodes_libres;
+    int blocs_avant  = disque.sb.nb_blocs_libres;
+    printf("AVANT : %d inodes libres, %d blocs libres\n",
+           inodes_avant, blocs_avant);
 
-    printf("\n--- On entre dans photos ---\n");
-    inode_courant = dossier;
+    int ino = mycreat("temp.txt", 644);
+    char *texte = "Donnees temporaires a supprimer ensuite.";
+    mywrite(ino, texte, strlen(texte));
+    printf("PENDANT : %d inodes libres, %d blocs libres\n",
+           disque.sb.nb_inodes_libres, disque.sb.nb_blocs_libres);
 
-    mycreat("vacances.jpg", 644);
+    myunlink("temp.txt");
 
-    printf("Recherche 'vacances.jpg' dans photos : inode %d\n",
-           chercher_entree("vacances.jpg"));
+    int inodes_apres = disque.sb.nb_inodes_libres;
+    int blocs_apres  = disque.sb.nb_blocs_libres;
+    printf("APRES : %d inodes libres, %d blocs libres\n",
+           inodes_apres, blocs_apres);
 
-    printf("Recherche 'racine.txt' dans photos  : %d (doit etre -1)\n",
-           chercher_entree("racine.txt"));
-
-    printf("\n--- On remonte au parent (cd ..) ---\n");
-    inode_courant = chercher_entree("..");
-    printf("Inode courant apres remontee : %d (doit etre 0, la racine)\n",
-           inode_courant);
-
-    printf("Recherche 'racine.txt' dans racine  : inode %d\n",
-           chercher_entree("racine.txt"));
+    if (inodes_avant == inodes_apres && blocs_avant == blocs_apres) {
+        printf(">>> SUCCES : aucune fuite, la place a ete rendue !\n");
+    } else {
+        printf(">>> ECHEC : il y a une fuite de ressources !\n");
+    }
 
     sauvegarder_disque();
     printf("=== Fin du test ===\n");

@@ -246,3 +246,60 @@ int mymkdir(char *nom) {
     printf("Repertoire '%s' cree (inode %d).\n", nom, i);
     return i;
 }
+
+int supprimer_entree(int inode_rep, char *nom) {
+    Inode *rep = &disque.inodes[inode_rep];
+    if (rep->blocs[0] == -1) {
+        return -1;
+    }
+
+    int b = rep->blocs[0];
+    EntreeRep *entrees = (EntreeRep *) disque.blocs[b].donnees;
+
+    for (int i = 0; i < (int) MAX_ENTREES; i++) {
+        if (entrees[i].inode != -1 && strcmp(entrees[i].nom, nom) == 0) {
+            int inode_trouve = entrees[i].inode;
+            entrees[i].inode = -1;
+            entrees[i].nom[0] = '\0';
+            return inode_trouve;
+        }
+    }
+    return -1;
+}
+
+void liberer_inode(int inode_num) {
+    Inode *ino = &disque.inodes[inode_num];
+
+    for (int j = 0; j < MAX_BLOCS_FIC; j++) {
+        if (ino->blocs[j] != -1) {
+            int b = ino->blocs[j];
+            disque.sb.bitmap_blocs[b] = 0;
+            disque.sb.nb_blocs_libres++;
+            ino->blocs[j] = -1;
+        }
+    }
+
+    ino->type = TYPE_LIBRE;
+    disque.sb.bitmap_inodes[inode_num] = 0;
+    disque.sb.nb_inodes_libres++;
+}
+
+int myunlink(char *nom) {
+    int ino = supprimer_entree(inode_courant, nom);
+    if (ino == -1) {
+        printf("Erreur : '%s' introuvable.\n", nom);
+        return -1;
+    }
+
+    disque.inodes[ino].nb_liens--;
+
+    if (disque.inodes[ino].nb_liens <= 0) {
+        liberer_inode(ino);
+        printf("Fichier '%s' supprime (inode %d libere).\n", nom, ino);
+    } else {
+        printf("Lien '%s' supprime (il reste %d lien(s)).\n",
+               nom, disque.inodes[ino].nb_liens);
+    }
+
+    return 0;
+}
