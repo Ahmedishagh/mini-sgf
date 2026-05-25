@@ -4,52 +4,103 @@
 
 int charger_disque(void);
 int sauvegarder_disque(void);
-int mycreat(char *nom, int droits);
-int mymkdir(char *nom);
-int myrmdir(char *nom);
-int chercher_entree(char *nom);
 
 extern Disque disque;
 extern int inode_courant;
+void cmd_ls(void);
+void cmd_df(void);
+void cmd_cd(char *nom);
+void cmd_cat(char *nom);
+int mymkdir(char *nom);
+int myrmdir(char *nom);
+int myunlink(char *nom);
+int mylink(char *nom1, char *nom2);
+void cmd_echo(char *texte, char *redirection, char *fichier);
+void cmd_cp(char *src, char *dst);
+void cmd_mv(char *src, char *dst);
+
+#define TAILLE_LIGNE 256
 
 int main(void) {
-    printf("=== Test rmdir ===\n");
+    char ligne[TAILLE_LIGNE];
+
+    printf("=== Mini-Shell SGF (tapez 'exit' pour quitter) ===\n");
+
     charger_disque();
 
-    mycreat("ancre.txt", 644);
+    while (1) {
+        printf("[mysh] $ ");
+        fflush(stdout);            
 
-    int inodes_ref = disque.sb.nb_inodes_libres;
-    int blocs_ref  = disque.sb.nb_blocs_libres;
-    printf("Reference : %d inodes, %d blocs\n", inodes_ref, blocs_ref);
+        if (fgets(ligne, TAILLE_LIGNE, stdin) == NULL) {
+            printf("\n");
+            break;
+        }
 
-    printf("\n--- Cas 1 : dossier non vide ---\n");
-    int dossier = mymkdir("travail");
-    inode_courant = dossier;      
-    mycreat("fichier_dedans.txt", 644); 
-    inode_courant = disque.sb.inode_racine; 
-    myrmdir("travail");               
+        ligne[strcspn(ligne, "\n")] = '\0';
 
-    printf("\n--- Cas 2 : dossier vide ---\n");
-    mymkdir("vide");                 
-    int inodes_avant = disque.sb.nb_inodes_libres;
-    int blocs_avant  = disque.sb.nb_blocs_libres;
-    myrmdir("vide");                
-    int inodes_apres = disque.sb.nb_inodes_libres;
-    int blocs_apres  = disque.sb.nb_blocs_libres;
+        if (strlen(ligne) == 0) {
+            continue;
+        }
 
-    if (inodes_apres > inodes_avant && blocs_apres > blocs_avant) {
-        printf(">>> SUCCES : le dossier vide a ete supprime et la place rendue.\n");
-    } else {
-        printf(">>> Probleme : la place n'a pas ete totalement rendue.\n");
+        if (strcmp(ligne, "exit") == 0) {
+            sauvegarder_disque();
+            printf("Au revoir !\n");
+            break;
+        }
+
+        char *args[20];
+        int nb_args = 0;
+
+        char *mot = strtok(ligne, " ");
+        while (mot != NULL && nb_args < 20) {
+            args[nb_args] = mot;
+            nb_args++;
+            mot = strtok(NULL, " ");
+        }
+
+        for (int i = nb_args; i < 20; i++) {
+            args[i] = NULL;
+        }
+
+        if (strcmp(args[0], "ls") == 0) {
+            cmd_ls();
+        }
+        else if (strcmp(args[0], "df") == 0) {
+            cmd_df();
+        }
+        else if (strcmp(args[0], "cd") == 0) {
+            cmd_cd(args[1]);
+        }
+        else if (strcmp(args[0], "cat") == 0) {
+            cmd_cat(args[1]);
+        }
+        else if (strcmp(args[0], "mkdir") == 0) {
+            mymkdir(args[1]);
+        }
+        else if (strcmp(args[0], "rmdir") == 0) {
+            myrmdir(args[1]);
+        }
+        else if (strcmp(args[0], "rm") == 0) {
+            myunlink(args[1]);
+        }
+        else if (strcmp(args[0], "ln") == 0) {
+            mylink(args[1], args[2]);
+        }
+        else if (strcmp(args[0], "echo") == 0) {
+            cmd_echo(args[1], args[2], args[3]);
+        }
+        else if (strcmp(args[0], "cp") == 0) {
+            cmd_cp(args[1], args[2]);
+        }
+        else if (strcmp(args[0], "mv") == 0) {
+            cmd_mv(args[1], args[2]);
+        }
+        else {
+            printf("Commande inconnue : '%s'\n", args[0]);
+        }
+    
     }
 
-    if (chercher_entree("travail") != -1) {
-        printf(">>> SUCCES : le dossier non vide 'travail' a bien ete protege.\n");
-    } else {
-        printf(">>> Probleme : 'travail' a ete supprime alors qu'il ne devait pas.\n");
-    }
-
-    sauvegarder_disque();
-    printf("=== Fin du test ===\n");
     return 0;
 }

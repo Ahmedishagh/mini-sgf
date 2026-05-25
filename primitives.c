@@ -373,3 +373,149 @@ int myrmdir(char *nom) {
     printf("Repertoire '%s' supprime (inode %d libere).\n", nom, ino);
     return 0;
 }
+
+void cmd_ls(void) {
+    Inode *rep = &disque.inodes[inode_courant];
+    if (rep->blocs[0] == -1) {
+        return;
+    }
+
+    int b = rep->blocs[0];
+    EntreeRep *entrees = (EntreeRep *) disque.blocs[b].donnees;
+
+    for (int i = 0; i < (int) MAX_ENTREES; i++) {
+        if (entrees[i].inode != -1) {
+            int type = disque.inodes[entrees[i].inode].type;
+            if (type == TYPE_REPERTOIRE) {
+                printf("%s/  ", entrees[i].nom);
+            } else {
+                printf("%s  ", entrees[i].nom);
+            }
+        }
+    }
+    printf("\n");
+}
+
+
+void cmd_df(void) {
+    int blocs_libres  = disque.sb.nb_blocs_libres;
+    int inodes_libres = disque.sb.nb_inodes_libres;
+
+    printf("--- Informations du disque ---\n");
+    printf("Inodes : %d libres / %d total\n", inodes_libres, NB_INODES);
+    printf("Blocs  : %d libres / %d total\n", blocs_libres, NB_BLOCS);
+    printf("Espace libre : %d octets\n", blocs_libres * TAILLE_BLOC);
+}
+
+void cmd_cd(char *nom) {
+    if (nom == NULL) {
+        inode_courant = disque.sb.inode_racine;
+        return;
+    }
+
+    int ino = chercher_entree(nom);
+    if (ino == -1) {
+        printf("cd : '%s' introuvable.\n", nom);
+        return;
+    }
+
+    if (disque.inodes[ino].type != TYPE_REPERTOIRE) {
+        printf("cd : '%s' n'est pas un repertoire.\n", nom);
+        return;
+    }
+
+    inode_courant = ino;
+}
+
+void cmd_cat(char *nom) {
+    if (nom == NULL) {
+        printf("cat : nom de fichier manquant.\n");
+        return;
+    }
+
+    int ino = chercher_entree(nom);
+    if (ino == -1) {
+        printf("cat : '%s' introuvable.\n", nom);
+        return;
+    }
+
+    if (disque.inodes[ino].type != TYPE_FICHIER) {
+        printf("cat : '%s' n'est pas un fichier.\n", nom);
+        return;
+    }
+
+    char buffer[TAILLE_BLOC * MAX_BLOCS_FIC];
+    memset(buffer, 0, sizeof(buffer));
+    int n = myread(ino, buffer, sizeof(buffer) - 1);
+    if (n > 0) {
+        printf("%s\n", buffer);
+    }
+}
+
+void cmd_echo(char *texte, char *redirection, char *fichier) {
+    if (texte == NULL || redirection == NULL || fichier == NULL) {
+        printf("echo : usage : echo texte > fichier\n");
+        return;
+    }
+    if (strcmp(redirection, ">") != 0) {
+        printf("echo : symbole de redirection '>' attendu.\n");
+        return;
+    }
+
+    int ino = myopen(fichier, 644);
+    if (ino == -1) {
+        printf("echo : impossible d'ouvrir '%s'.\n", fichier);
+        return;
+    }
+
+    mywrite(ino, texte, strlen(texte));
+    myclose(ino);
+}
+
+void cmd_cp(char *src, char *dst) {
+    if (src == NULL || dst == NULL) {
+        printf("cp : usage : cp source destination\n");
+        return;
+    }
+
+    int ino_src = chercher_entree(src);
+    if (ino_src == -1) {
+        printf("cp : '%s' introuvable.\n", src);
+        return;
+    }
+    if (disque.inodes[ino_src].type != TYPE_FICHIER) {
+        printf("cp : '%s' n'est pas un fichier.\n", src);
+        return;
+    }
+
+    char buffer[TAILLE_BLOC * MAX_BLOCS_FIC];
+    memset(buffer, 0, sizeof(buffer));
+    int n = myread(ino_src, buffer, sizeof(buffer));
+
+    int ino_dst = mycreat(dst, disque.inodes[ino_src].droits);
+    if (ino_dst == -1) {
+        printf("cp : impossible de creer '%s'.\n", dst);
+        return;
+    }
+    mywrite(ino_dst, buffer, n);
+
+    printf("'%s' copie vers '%s'.\n", src, dst);
+}
+
+void cmd_mv(char *src, char *dst) {
+    if (src == NULL || dst == NULL) {
+        printf("mv : usage : mv source destination\n");
+        return;
+    }
+
+    int ino_src = chercher_entree(src);
+    if (ino_src == -1) {
+        printf("mv : '%s' introuvable.\n", src);
+        return;
+    }
+
+    cmd_cp(src, dst);
+    myunlink(src);
+
+    printf("'%s' renomme en '%s'.\n", src, dst);
+}
