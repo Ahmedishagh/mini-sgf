@@ -18,6 +18,7 @@ int mylink(char *nom1, char *nom2);
 void cmd_echo(char *texte, char *redirection, char *fichier);
 void cmd_cp(char *src, char *dst);
 void cmd_mv(char *src, char *dst);
+void cmd_ls_long(void);
 
 #define TAILLE_LIGNE 256
 
@@ -64,7 +65,11 @@ int main(void) {
         }
 
         if (strcmp(args[0], "ls") == 0) {
-            cmd_ls();
+            if (args[1] != NULL && strcmp(args[1], "-l") == 0) {
+                cmd_ls_long();
+            } else {
+                cmd_ls();
+            }
         }
         else if (strcmp(args[0], "df") == 0) {
             cmd_df();

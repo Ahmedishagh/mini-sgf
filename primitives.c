@@ -519,3 +519,38 @@ void cmd_mv(char *src, char *dst) {
 
     printf("'%s' renomme en '%s'.\n", src, dst);
 }
+
+void cmd_ls_long(void) {
+    Inode *rep = &disque.inodes[inode_courant];
+    if (rep->blocs[0] == -1) {
+        return;
+    }
+
+    int b = rep->blocs[0];
+    EntreeRep *entrees = (EntreeRep *) disque.blocs[b].donnees;
+
+    for (int i = 0; i < (int) MAX_ENTREES; i++) {
+        if (entrees[i].inode != -1) {
+            Inode *ino = &disque.inodes[entrees[i].inode];
+
+            char type_car;
+            if (ino->type == TYPE_REPERTOIRE) {
+                type_car = 'd';
+            } else {
+                type_car = '-';
+            }
+
+            time_t date = (time_t) ino->date_modif;
+            struct tm *tinfo = localtime(&date);
+            char date_txt[32];
+            strftime(date_txt, sizeof(date_txt), "%d/%m/%Y %H:%M", tinfo);
+
+            printf("%c %d %6d octets  %s  %s\n",
+                   type_car,
+                   ino->droits,
+                   ino->taille,
+                   date_txt,
+                   entrees[i].nom);
+        }
+    }
+}
